@@ -21,12 +21,16 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Отзывы">
 
-  <!-- Тема ставится до первой отрисовки — без мигания -->
+  <!-- Тема и режим QR ставятся до первой отрисовки — без мигания -->
   <script>
     try {
       var t = localStorage.getItem('theme');
       if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
     } catch (e) {}
+    // Установленное приложение (или ярлык «Показать QR») — сразу только QR, без лендинга
+    if (matchMedia('(display-mode: standalone)').matches || navigator.standalone || /[?&]qr=1/.test(location.search)) {
+      document.documentElement.classList.add('qr-mode');
+    }
   </script>
 
   <style>
@@ -231,7 +235,13 @@
     .quote p { font-size: 16px; line-height: 1.5; letter-spacing: -.005em; flex: 1; }
     .quote cite { font-style: normal; font-size: 13.5px; color: var(--text-2); display: flex; align-items: center; gap: 8px; }
     .quote cite b { color: var(--text); font-weight: 600; }
-    .hint-swipe { font-size: 13px; color: var(--text-3); margin-top: 4px; }
+    .all-reviews {
+      display: inline-flex; align-items: center; gap: 6px; margin-top: 6px;
+      font-size: 15px; font-weight: 600; color: var(--accent); text-decoration: none;
+    }
+    .all-reviews:hover { text-decoration: underline; }
+    .all-reviews svg { width: 18px; height: 18px; transition: transform .15s; }
+    .all-reviews:hover svg { transform: translateX(3px); }
 
     /* ====== ФОРМА ====== */
     .form-card { padding: 28px; border-radius: var(--r-lg); position: relative; overflow: hidden; }
@@ -322,6 +332,33 @@
       .dock { display: block; }
       .dock .btn { width: 100%; }
     }
+    /* ====== АВАТАР-КНОПКА ====== */
+    .avatar-btn { border: 0; cursor: pointer; border-radius: 50%; -webkit-tap-highlight-color: transparent; transition: transform .12s; }
+    .avatar-btn:active { transform: scale(.94); }
+
+    /* ====== ПОЛНОЭКРАННЫЙ QR ====== */
+    .qr-screen {
+      position: fixed; inset: 0; z-index: 100; display: none;
+      flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+      padding: calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));
+      background: #fff; color: #111316; text-align: center;
+    }
+    html.qr-open .qr-screen, html.qr-mode .qr-screen { display: flex; }
+    html.qr-open body, html.qr-mode body { overflow: hidden; }
+    html.qr-mode body > :not(.qr-screen) { display: none !important; }
+    .qr-screen h2 { font-size: clamp(22px, 6vw, 30px); margin: 0; color: #111316; }
+    .qr-screen .qr-sub { font-size: 15px; color: #5d636b; margin-top: -10px; }
+    .qr-box { width: min(86vw, 62vh, 460px); aspect-ratio: 1; }
+    .qr-box svg { width: 100%; height: 100%; display: block; }
+    .qr-meta { font-size: 13px; color: #5d636b; min-height: 20px; display: flex; flex-direction: column; gap: 2px; }
+    .qr-meta b { color: #111316; }
+    .qr-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+    .qr-screen .btn-soft { background: #f2f3f5; color: #111316; box-shadow: none; border: 0; }
+    .qr-close { position: absolute; top: calc(12px + env(safe-area-inset-top)); right: 12px; color: #5d636b; }
+    .qr-close:hover { background: #f2f3f5; color: #111316; }
+    html.qr-mode .qr-close { display: none; }
+    .qr-hint { font-size: 13px; color: #8a9098; max-width: 320px; }
+
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
@@ -348,10 +385,10 @@
     <section class="hero">
       <div class="wrap">
         <div class="hero-id">
-          <div class="avatar">
+          <button class="avatar avatar-btn" id="avatarBtn" type="button" aria-label="Показать QR-код этой страницы">
             <img src="data:image/webp;base64,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" alt="Egor Sharipin" width="76" height="76" fetchpriority="high">
             <span class="tick" aria-hidden="true"><svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span>
-          </div>
+          </button>
           <div>
             <b>Egor Sharipin</b>
             <span class="level"><svg viewBox="0 0 24 24"><path d="M12 2l3 6 6.5 1-4.7 4.6 1.1 6.5L12 17l-5.9 3.1 1.1-6.5L2.5 9 9 8z"/></svg>Знаток города · 16 уровень</span>
@@ -459,7 +496,10 @@
             <cite><b>Арт Гирос</b> · Кисловодск</cite>
           </figure>
         </div>
-        <div class="hint-swipe">Листайте вбок →</div>
+        <a class="all-reviews" href="https://reviews.yandex.ru/user/hzaguayx1qb2erj3hfm1z02zjm?main_tab=org" target="_blank" rel="noopener">
+          Все мои отзывы на Яндексе
+          <svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
       </div>
     </section>
 
@@ -556,6 +596,20 @@
     <div class="wrap">© Egor Sharipin · Отзывы о заведениях с 2016 года</div>
   </footer>
 
+  <div class="qr-screen" id="qrScreen" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+    <button class="icon-btn qr-close" id="qrClose" type="button" aria-label="Закрыть">
+      <svg class="i" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+    <h2 id="qrTitle">Наведите камеру</h2>
+    <p class="qr-sub">Пригласите меня оставить отзыв о вашем заведении</p>
+    <div class="qr-box" id="qrBox" aria-label="QR-код страницы"></div>
+    <div class="qr-meta" id="qrMeta" aria-live="polite"></div>
+    <div class="qr-actions">
+      <button class="btn btn-soft btn-sm" id="qrNew" type="button">Новый код</button>
+    </div>
+    <p class="qr-hint" id="qrHint" hidden></p>
+  </div>
+
   <div class="dock" id="dock">
     <a class="btn btn-primary" href="#invite">Пригласить в заведение</a>
   </div>
@@ -568,8 +622,17 @@
       var FORMSPREE_URL = 'https://formspree.io/f/xbglqjzn';
       var METRIKA_ID = 113125047;
 
-      function goal(name) {
-        try { if (window.ym) window.ym(METRIKA_ID, 'reachGoal', name); } catch (e) {}
+      // Вызовы Метрики копятся, пока счётчик не загрузится (он грузится отложенно), и уходят после init
+      var metrikaQueue = [];
+      var metrikaReady = false;
+      function metrika() {
+        var args = [METRIKA_ID].concat(Array.prototype.slice.call(arguments));
+        if (!metrikaReady) { metrikaQueue.push(args); return; }
+        try { window.ym.apply(window, args); } catch (e) {}
+      }
+      function goal(name, params) {
+        if (params) metrika('reachGoal', name, params);
+        else metrika('reachGoal', name);
       }
 
       function sendToFormspree(data) {
@@ -638,6 +701,7 @@
 
         submitBtn.disabled = true;
         submitBtn.textContent = 'Отправляем…';
+        var ref = sourceCode();
 
         sendToFormspree({
           _subject: 'Приглашение оставить отзыв' + (name ? ' — ' + name : ''),
@@ -645,13 +709,17 @@
           'Контакт': contact,
           'Что предлагают': kinds.length ? kinds.join(', ') : 'не указано',
           'Комментарий': review || '—',
+          'Код визитки': ref ? ref.code : 'зашли без QR',
+          'Родительский код': ref ? ref.parent : '—',
+          'Цепочка': ref ? ref.chain : '—',
           'Страница': location.pathname + location.hash,
           'Время (МСК)': new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })
         }).then(function (ok) {
           submitBtn.disabled = false;
           submitBtn.innerHTML = submitLabel;
           if (ok) {
-            goal('invite_sent');
+            goal('invite_sent', ref ? { ref_code: ref.code, ref_parent: ref.parent, ref_chain: ref.chain } : undefined);
+            metrika('params', { 'Рефералы: заявки': nest(arrivalPath(), 'заявка') });
             statusEl.textContent = '';
             document.getElementById('successText').textContent =
               'Спасибо' + (name ? ', ' + name : '') + '! Я свяжусь с вами по указанному контакту, чтобы согласовать визит.';
@@ -671,6 +739,269 @@
         formScreen.style.display = '';
         form.elements.contact.focus();
       });
+
+      /* ---------------- QR-визитка и реферальное дерево ----------------
+       * Тап по аватару — QR этой страницы на весь экран (и предложение установить приложение).
+       * В установленном приложении показывается только QR.
+       *
+       * Дерево кодов. Корень — код «0» (страница без кода), у него нет родителя.
+       * Каждый новый код строится из ссылки, по которой пришёл его владелец:
+       *   ?r=ab12cd            — код ab12cd, родитель 0 (выдан владельцем сайта)
+       *   ?r=ab12cd.ef34gh     — код ef34gh, родитель ab12cd (выдал гость, пришедший по ab12cd)
+       * Вся цепочка от корня лежит в ссылке, поэтому родителя можно определить по любому коду.
+       * Переходы, выдачи кодов и заявки уходят в Метрику вложенными параметрами визита —
+       * в отчёте «Параметры визитов» они раскрываются деревом 0 → ab12cd → ef34gh.
+       * На устройстве владельца выдача кода записывает геолокацию (локально + письмом через Formspree).
+       */
+      var html = document.documentElement;
+      var qrBox = document.getElementById('qrBox');
+      var qrMeta = document.getElementById('qrMeta');
+      var qrHint = document.getElementById('qrHint');
+      var installPrompt = null;
+      var wakeLock = null;
+      var current = null;
+      var HANDOUT_TTL = 2 * 60 * 1000;
+
+      function store(key, value) {
+        try {
+          if (value === undefined) return JSON.parse(localStorage.getItem(key) || 'null');
+          localStorage.setItem(key, JSON.stringify(value));
+        } catch (e) { return null; }
+      }
+      function isStandalone() {
+        return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      }
+      function isOwner() { return store('owner') === true; }
+      if (isStandalone()) store('owner', true);
+
+      var ROOT = '0';
+      var CODE_RE = /^[a-z0-9]{6}(\.[a-z0-9]{6}){0,19}$/;
+
+      function parsePath(s) { return s && CODE_RE.test(s) ? s.split('.') : null; }
+      function describe(path) {
+        return {
+          code: path.length ? path[path.length - 1] : ROOT,
+          parent: path.length > 1 ? path[path.length - 2] : (path.length ? ROOT : null),
+          depth: path.length,
+          chain: [ROOT].concat(path).join(' → ')
+        };
+      }
+      // {0: {ab12cd: {ef34gh: leaf}}} — так Метрика строит дерево в отчёте
+      function nest(path, leaf) {
+        var keys = [ROOT].concat(path), obj = leaf;
+        for (var i = keys.length - 1; i >= 0; i--) { var o = {}; o[keys[i]] = obj; obj = o; }
+        return obj;
+      }
+
+      // Код, по которому пришёл этот посетитель: из ссылки, иначе первый запомненный (first touch)
+      var urlPath = parsePath(new URLSearchParams(location.search).get('r'));
+      if (urlPath && !store('refFrom')) store('refFrom', urlPath.join('.'));
+      function arrivalPath() { return urlPath || parsePath(store('refFrom')) || []; }
+
+      // От какого узла растут коды этого устройства: у владельца — от корня, у гостя — от своего кода
+      function basePath() { return isOwner() ? [] : arrivalPath(); }
+
+      function sourceCode() { var p = arrivalPath(); return p.length ? describe(p) : null; }
+
+      function pageUrl(path) {
+        return location.origin + location.pathname + '?r=' + path.join('.');
+      }
+
+      if (urlPath && !html.classList.contains('qr-mode')) {
+        var ref = describe(urlPath);
+        metrika('params', { 'Рефералы: переходы': nest(urlPath, 'переход') });
+        metrika('userParams', { ref_code: ref.code, ref_parent: ref.parent, ref_chain: ref.chain });
+      }
+
+      function loadQrLib() {
+        if (window.qrcode) return Promise.resolve(window.qrcode);
+        return new Promise(function (resolve, reject) {
+          var s = document.createElement('script');
+          s.src = 'qr.min.js';
+          s.onload = function () { resolve(window.qrcode); };
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      }
+
+      function renderQr(text) {
+        return loadQrLib().then(function (qrcode) {
+          var qr = qrcode(0, 'M');
+          qr.addData(text);
+          qr.make();
+          var n = qr.getModuleCount(), pad = 4, size = n + pad * 2, d = '';
+          for (var r = 0; r < n; r++) {
+            for (var c = 0; c < n; c++) {
+              if (qr.isDark(r, c)) d += 'M' + (c + pad) + ' ' + (r + pad) + 'h1v1h-1z';
+            }
+          }
+          qrBox.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + size + ' ' + size +
+            '" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/><path fill="#000" d="' + d + '"/></svg>';
+        }).catch(function () {
+          qrBox.innerHTML = '';
+          qrMeta.textContent = 'Не удалось построить QR — проверьте интернет и откройте ещё раз.';
+        });
+      }
+
+      function mapLink(h) {
+        return 'https://yandex.ru/maps/?pt=' + h.lon + ',' + h.lat + '&z=17&l=map';
+      }
+
+      /* Очередь отправки: переживает офлайн и перезапуск приложения */
+      function flushQueue() {
+        var queue = store('handoutQueue') || [];
+        if (!queue.length || !navigator.onLine) return;
+        var h = queue[0];
+        var info = describe(h.path || [h.id]);
+        sendToFormspree({
+          _subject: 'QR выдан — код ' + h.id,
+          'Код': h.id,
+          'Родительский код': info.parent,
+          'Цепочка': info.chain,
+          'Место': h.lat != null ? mapLink(h) : 'геолокация недоступна (' + (h.geoError || 'нет данных') + ')',
+          'Координаты': h.lat != null ? h.lat + ', ' + h.lon : '—',
+          'Точность, м': h.acc != null ? h.acc : '—',
+          'Ссылка в QR': pageUrl(h.path || [h.id]),
+          'Время (МСК)': new Date(h.t).toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })
+        }).then(function (ok) {
+          if (!ok) return;
+          var rest = (store('handoutQueue') || []).filter(function (x) { return x.id !== h.id; });
+          store('handoutQueue', rest);
+          flushQueue();
+        });
+      }
+      window.addEventListener('online', flushQueue);
+
+      function saveHandout(h) {
+        var log = store('handouts') || [];
+        log = log.filter(function (x) { return x.id !== h.id; });
+        log.unshift(h);
+        store('handouts', log.slice(0, 500));
+        var queue = (store('handoutQueue') || []).filter(function (x) { return x.id !== h.id; });
+        queue.push(h);
+        store('handoutQueue', queue);
+        flushQueue();
+      }
+
+      function todayCount() {
+        var start = new Date(); start.setHours(0, 0, 0, 0);
+        return (store('handouts') || []).filter(function (x) { return x.t >= start.getTime(); }).length;
+      }
+
+      function showMeta(h, text) {
+        qrMeta.innerHTML = '';
+        var line = document.createElement('span');
+        line.innerHTML = 'Код <b></b> · родитель <b></b>';
+        line.querySelectorAll('b')[0].textContent = h.id;
+        line.querySelectorAll('b')[1].textContent = describe(h.path || [h.id]).parent;
+        if (text) line.appendChild(document.createTextNode(' · ' + text));
+        qrMeta.appendChild(line);
+        if (isOwner()) {
+          var count = document.createElement('span');
+          count.textContent = 'Выдано сегодня: ' + todayCount();
+          qrMeta.appendChild(count);
+        }
+      }
+
+      function recordGeo(h) {
+        if (!('geolocation' in navigator)) {
+          h.geoError = 'не поддерживается';
+          saveHandout(h); showMeta(h, 'без геолокации');
+          return;
+        }
+        showMeta(h, 'определяю место…');
+        navigator.geolocation.getCurrentPosition(function (pos) {
+          h.lat = +pos.coords.latitude.toFixed(6);
+          h.lon = +pos.coords.longitude.toFixed(6);
+          h.acc = Math.round(pos.coords.accuracy);
+          saveHandout(h);
+          if (current === h) showMeta(h, 'место сохранено ±' + h.acc + ' м');
+        }, function (err) {
+          h.geoError = err.code === 1 ? 'доступ запрещён' : 'не удалось определить';
+          saveHandout(h);
+          if (current === h) showMeta(h, 'без геолокации: ' + h.geoError);
+        }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+      }
+
+      function newHandout() {
+        var id = '';
+        while (id.length < 6) id += Math.random().toString(36).slice(2);
+        id = id.slice(0, 6);
+        var path = basePath().concat(id);
+        current = { id: id, path: path, t: Date.now() };
+        store('lastHandout', current);
+        renderQr(pageUrl(path));
+        var info = describe(path);
+        goal('qr_issued', { ref_code: info.code, ref_parent: info.parent, ref_chain: info.chain });
+        metrika('params', { 'Рефералы: выданные коды': nest(path, isOwner() ? 'выдал владелец' : 'выдал гость') });
+        if (isOwner()) recordGeo(current);
+        else showMeta(current);
+      }
+
+      function keepScreenOn() {
+        if (!('wakeLock' in navigator) || wakeLock) return;
+        navigator.wakeLock.request('screen').then(function (lock) {
+          wakeLock = lock;
+          lock.addEventListener('release', function () { wakeLock = null; });
+        }).catch(function () {});
+      }
+
+      function openQr() {
+        html.classList.add('qr-open');
+        var last = store('lastHandout');
+        if (current && Date.now() - current.t < HANDOUT_TTL) { /* тот же код — повторно не пишем */ }
+        else if (last && last.path && Date.now() - last.t < HANDOUT_TTL && !current) {
+          current = last; renderQr(pageUrl(last.path)); showMeta(last, isOwner() ? 'место уже записано' : '');
+        } else newHandout();
+        keepScreenOn();
+        var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        if (ios && !isStandalone()) {
+          qrHint.textContent = 'Чтобы открывать QR одним касанием: «Поделиться» → «На экран Домой».';
+          qrHint.hidden = false;
+        }
+      }
+
+      function closeQr() {
+        if (html.classList.contains('qr-mode')) return;
+        html.classList.remove('qr-open');
+        if (wakeLock) wakeLock.release();
+      }
+
+      // Своё предложение установки не показываем — только по тапу на аватар
+      window.addEventListener('beforeinstallprompt', function (e) {
+        e.preventDefault();
+        installPrompt = e;
+      });
+      window.addEventListener('appinstalled', function () { store('owner', true); installPrompt = null; });
+
+      document.getElementById('avatarBtn').addEventListener('click', function () {
+        if (installPrompt) {
+          var p = installPrompt;
+          installPrompt = null;
+          p.prompt();
+          p.userChoice.then(function (choice) {
+            if (choice.outcome === 'accepted') {
+              store('owner', true);
+              if (current) recordGeo(current);
+            }
+          });
+        }
+        openQr();
+      });
+      document.getElementById('qrClose').addEventListener('click', closeQr);
+      document.getElementById('qrNew').addEventListener('click', newHandout);
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeQr(); });
+
+      // Приложение открыто или возвращено из фона — новый код с новой геолокацией
+      if (html.classList.contains('qr-mode')) openQr();
+      document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState !== 'visible') return;
+        if (html.classList.contains('qr-open') || html.classList.contains('qr-mode')) {
+          if (!current || Date.now() - current.t >= HANDOUT_TTL) newHandout();
+          keepScreenOn();
+        }
+      });
+      flushQueue();
 
       /* ---------------- Липкая кнопка: прячем, когда форма на экране ---------------- */
       var dock = document.getElementById('dock');
@@ -695,6 +1026,7 @@
         else if (href.indexOf('wa.me') > -1) goal('click_whatsapp');
         else if (href.indexOf('tel:') === 0) goal('click_phone');
         else if (href.indexOf('contact.vcf') > -1) goal('save_contact');
+        else if (href.indexOf('reviews.yandex.ru') > -1) goal('click_all_reviews');
       });
 
       /* ---------------- Отложенная загрузка: SW и Метрика после отрисовки ---------------- */
@@ -713,6 +1045,10 @@
             k = e.createElement(t), a = e.getElementsByTagName(t)[0], k.async = 1, k.src = r, a.parentNode.insertBefore(k, a);
           })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js?id=' + METRIKA_ID, 'ym');
           window.ym(METRIKA_ID, 'init', { ssr: true, clickmap: true, ecommerce: 'dataLayer', referrer: document.referrer, url: location.href, accurateTrackBounce: true, trackLinks: true });
+          // Визиты владельца помечаем, чтобы в отчётах их можно было отфильтровать
+          if (isOwner()) window.ym(METRIKA_ID, 'userParams', { role: 'owner' });
+          metrikaReady = true;
+          metrikaQueue.splice(0).forEach(function (args) { try { window.ym.apply(window, args); } catch (e) {} });
         }, { timeout: 3000 });
       });
     })();

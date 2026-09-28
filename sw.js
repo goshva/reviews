@@ -1,6 +1,6 @@
 /* Service worker для PWA: страница — сначала из сети (свежая после деплоя), при офлайне — из кэша */
-const CACHE = 'reviews-v4';
-const ASSETS = ['./', './index.html', './contact.vcf', './manifest.webmanifest', './avatar.jpg'];
+const CACHE = 'reviews-v5';
+const ASSETS = ['./', './index.html', './qr.min.js', './contact.vcf', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)).then(() => self.skipWaiting()));
