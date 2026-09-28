@@ -536,7 +536,7 @@
         <span><strong>Сделаю фото</strong> — сниму заведение, блюда, товар и атмосферу, чтобы отзыв был живым и наглядным.</span>
       </div>
 
-      <form id="callbackForm" novalidate>
+      <form id="callbackForm" action="https://formspree.io/f/xbglqjzn" method="POST" novalidate>
         <!-- Звёзды -->
         <div class="rating-block">
           <span class="rating-label">Насколько вам интересно такое приглашение?</span>
@@ -631,46 +631,20 @@
   </main>
 
   <script>
-    /* Возрождение — сайт: мобильное меню, учёт визитов и форма обратной связи через Telegram-бота.
-     *
-     * ВНИМАНИЕ: токен бота виден в исходном коде страницы всем посетителям сайта.
-     * Перед реальным использованием: смените токен через @BotFather (/revoke) и для продакшена
-     * перенесите отправку сообщений на сервер/облачную функцию.
-     */
+    /* Сайт отзывов: тема, оценка звёздами и форма приглашения (отправка через Formspree). */
     (function () {
       'use strict';
 
-      var TELEGRAM_BOT_TOKEN = '8431645174:AAGTV2Xg4mpOKiqaKHR73pVBBKUDHm0D_yo';
-      var TELEGRAM_CHAT_ID = '190404167';
+      var FORMSPREE_URL = 'https://formspree.io/f/xbglqjzn';
 
-      function sendToTelegram(text) {
-        if (!TELEGRAM_CHAT_ID || TELEGRAM_CHAT_ID === 'REPLACE_WITH_CHAT_ID') {
-          console.warn('[Отзывы] TELEGRAM_CHAT_ID не настроен:', text);
-          return Promise.resolve(false);
-        }
-        var url = 'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage'
-          + '?chat_id=' + encodeURIComponent(TELEGRAM_CHAT_ID)
-          + '&text=' + encodeURIComponent(text);
-        return fetch(url, { method: 'GET', mode: 'no-cors' })
-          .then(function () { return true; })
-          .catch(function (err) { console.warn('[Отзывы] Telegram send failed', err); return false; });
-      }
-
-      /* ---------------- Учёт визитов ---------------- */
-      function trackVisit() {
-        var KEY = 'reviews_last_visit_ping';
-        var THROTTLE_MS = 3 * 60 * 1000;
-        var now = Date.now();
-        var last = 0;
-        try { last = parseInt(localStorage.getItem(KEY) || '0', 10); } catch (e) {}
-        if (now - last < THROTTLE_MS) return;
-        try { localStorage.setItem(KEY, String(now)); } catch (e) {}
-
-        var page = location.pathname + location.hash;
-        var ref = document.referrer ? document.referrer : 'прямой заход';
-        var text = 'Визит на сайт отзывов\nСтраница: ' + page + '\nИсточник: ' + ref
-          + '\nВремя: ' + new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' }) + ' (МСК)';
-        sendToTelegram(text);
+      function sendToFormspree(data) {
+        return fetch(FORMSPREE_URL, {
+          method: 'POST',
+          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        })
+          .then(function (res) { return res.ok; })
+          .catch(function (err) { console.warn('[Отзывы] Formspree send failed', err); return false; });
       }
 
       /* ---------------- Форма ---------------- */
@@ -706,15 +680,17 @@
           submitBtn.disabled = true;
           submitBtn.textContent = msg.sending;
 
-          var text = 'Приглашение оставить отзыв\n'
-            + 'Имя и заведение: ' + (name || 'не указано') + '\n'
-            + 'Контакт: ' + contact + '\n'
-            + 'Что предлагают: ' + (review || 'не указано') + '\n'
-            + 'Оценка предложения: ' + (rating ? rating + '/5' : 'без оценки') + '\n'
-            + 'Страница: ' + location.pathname + location.hash + '\n'
-            + 'Время: ' + new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' }) + ' (МСК)';
+          var data = {
+            _subject: 'Приглашение оставить отзыв' + (name ? ' — ' + name : ''),
+            'Имя и заведение': name || 'не указано',
+            'Контакт': contact,
+            'Что предлагают': review || 'не указано',
+            'Оценка предложения': rating ? rating + '/5' : 'без оценки',
+            'Страница': location.pathname + location.hash,
+            'Время (МСК)': new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow' })
+          };
 
-          sendToTelegram(text).then(function (ok) {
+          sendToFormspree(data).then(function (ok) {
             submitBtn.disabled = false;
             submitBtn.innerHTML = submitLabel;
             if (ok) {
@@ -813,7 +789,6 @@
         initStars();
         initCallbackForm();
         initReset();
-        trackVisit();
         initPWA();
       });
     })();

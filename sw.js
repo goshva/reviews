@@ -1,6 +1,6 @@
 
 /* Service worker для PWA — кэширует оболочку и работает офлайн */
-const CACHE = 'reviews-v2';
+const CACHE = 'reviews-v3';
 const ASSETS = [
   './',
   './index.html',
@@ -28,9 +28,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
-  // Не кэшируем запросы к Telegram
+  // Не кэшируем запросы к Formspree
   const url = new URL(request.url);
-  if (url.hostname.includes('api.telegram.org')) return;
+  if (url.hostname.includes('formspree.io')) return;
 
   event.respondWith(
     caches.match(request).then((cached) => {
