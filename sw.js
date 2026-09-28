@@ -1,14 +1,14 @@
 
 /* Service worker для PWA — кэширует оболочку и работает офлайн */
-const CACHE = 'reviews-v1';
+const CACHE = 'reviews-v2';
 const ASSETS = [
   './',
   './index.html',
   './avatar.jpg',
   './extended.svg',
   './manifest.webmanifest',
-  './icons/icon-192.png',
-  './icons/icon-512.png'
+  './vcard.png',
+  './contact.vcf'
 ];
 
 self.addEventListener('install', (event) => {
@@ -28,9 +28,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   if (request.method !== 'GET') return;
-  // Не кэшируем запросы к Telegram и QR-серверу
+  // Не кэшируем запросы к Telegram
   const url = new URL(request.url);
-  if (url.hostname.includes('api.telegram.org') || url.hostname.includes('qrserver.com')) return;
+  if (url.hostname.includes('api.telegram.org')) return;
 
   event.respondWith(
     caches.match(request).then((cached) => {
